@@ -1,0 +1,154 @@
+{
+  "is_chart": true,
+  "chart_type": "line",
+  "orientation": "vertical",
+  "title": {
+    "text": null,
+    "is_inferred": false
+  },
+  "x_axis": {
+    "name": "C/S",
+    "unit": null,
+    "is_inferred": false,
+    "scale": "linear",
+    "ticks_examples": [
+      "0.6",
+      "0.8",
+      "1",
+      "1.2",
+      "1.4",
+      "1.6",
+      "1.8"
+    ]
+  },
+  "y_axis": {
+    "name": "S",
+    "unit": "S",
+    "is_inferred": false,
+    "scale": "linear",
+    "ticks_examples": [
+      "0",
+      "5",
+      "10",
+      "15",
+      "20",
+      "25",
+      "30",
+      "35",
+      "40",
+      "45",
+      "50",
+      "55",
+      "60"
+    ]
+  },
+  "legend": {
+    "present": true,
+    "labels": [
+      "1500℃",
+      "1450℃",
+      "1400℃"
+    ],
+    "location_hint": null
+  },
+  "subplots": [
+    {
+      "title": null,
+      "x_axis": {
+        "name": "C/S",
+        "unit": null,
+        "is_inferred": false,
+        "scale": "linear",
+        "ticks_examples": [
+          "0.6",
+          "0.8",
+          "1",
+          "1.2",
+          "1.4",
+          "1.6",
+          "1.8"
+        ]
+      },
+      "y_axis": {
+        "name": "S",
+        "unit": "S",
+        "is_inferred": false,
+        "scale": "linear",
+        "ticks_examples": [
+          "0",
+          "5",
+          "10",
+          "15",
+          "20",
+          "25",
+          "30",
+          "35",
+          "40",
+          "45",
+          "50",
+          "55",
+          "60"
+        ]
+      },
+      "series": [
+        {
+          "name": "1500℃",
+          "style": {
+            "color_name": null,
+            "style_hint": null,
+            "marker": "none"
+          },
+          "legend_label": "1500℃"
+        },
+        {
+          "name": "1450℃",
+          "style": {
+            "color_name": null,
+            "style_hint": null,
+            "marker": "none"
+          },
+          "legend_label": "1450℃"
+        },
+        {
+          "name": "1400℃",
+          "style": {
+            "color_name": null,
+            "style_hint": null,
+            "marker": "none"
+          },
+          "legend_label": "1400℃"
+        }
+      ],
+      "bbox": null
+    }
+  ],
+  "annotations_present": false,
+  "annotations": [],
+  "data_series_count": 3,
+  "table_like": false,
+  "caption_nearby": null,
+  "key_phrases": [
+    "1500℃",
+    "1450℃",
+    "1400℃"
+  ],
+  "secondary_y_axis": null,
+  "grid_present": true,
+  "background_image_present": null,
+  "quality_flags": {
+    "low_resolution": false,
+    "cropped_or_cutoff": false,
+    "non_korean_text_present": false,
+    "heavy_watermark": false,
+    "skew_or_perspective": false
+  },
+  "confidence": 90.0,
+  "source": {
+    "source_pdf": null,
+    "page_number": null,
+    "image_path": "./data/images/g_2.png",
+    "image_sha1": "e9927ba9d4cba128e0262bdb206a9100832cb933",
+    "bbox": null
+  },
+  "extra": {}
+}

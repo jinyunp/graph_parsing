@@ -1,0 +1,74 @@
+{
+  "is_chart": true,
+  "chart_type": "scatter",
+  "orientation": "vertical",
+  "title": {
+    "text": "Slag 점도 (noise)",
+    "is_inferred": false
+  },
+  "x_axis": {
+    "name": "(CaO+MgO)/(SiO2+Al2O3)",
+    "unit": null,
+    "is_inferred": false,
+    "scale": "linear",
+    "ticks_examples": [
+      "0.7",
+      "0.8",
+      "0.9",
+      "1.0"
+    ]
+  },
+  "y_axis": {
+    "name": "Slag 점도 (noise)",
+    "unit": "noise",
+    "is_inferred": false,
+    "scale": "linear",
+    "ticks_examples": [
+      "0",
+      "2",
+      "4",
+      "6",
+      "8",
+      "10"
+    ]
+  },
+  "legend": {
+    "present": true,
+    "labels": [
+      "한원성분위기",
+      "산화성분위기"
+    ],
+    "location_hint": null
+  },
+  "subplots": [],
+  "annotations_present": false,
+  "annotations": [],
+  "data_series_count": 2,
+  "table_like": false,
+  "caption_nearby": null,
+  "key_phrases": [
+    "한원성분위기",
+    "산화성분위기",
+    "Slag 점도 (noise)",
+    "(CaO+MgO)/(SiO2+Al2O3)"
+  ],
+  "secondary_y_axis": null,
+  "grid_present": true,
+  "background_image_present": false,
+  "quality_flags": {
+    "low_resolution": false,
+    "cropped_or_cutoff": false,
+    "non_korean_text_present": false,
+    "heavy_watermark": false,
+    "skew_or_perspective": false
+  },
+  "confidence": 90.0,
+  "source": {
+    "source_pdf": null,
+    "page_number": null,
+    "image_path": "./data/images/g_6.png",
+    "image_sha1": "b9ea7889be8f4b95e8892c048cac6d95cbaf6abe",
+    "bbox": null
+  },
+  "extra": {}
+}

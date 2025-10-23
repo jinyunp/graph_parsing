@@ -1,0 +1,221 @@
+{
+  "is_chart": true,
+  "chart_type": "line",
+  "orientation": "vertical",
+  "title": {
+    "text": "병균 감염률",
+    "is_inferred": false
+  },
+  "x_axis": {
+    "name": "휴대일수",
+    "unit": "일",
+    "is_inferred": false,
+    "scale": "time",
+    "ticks_examples": [
+      "1일",
+      "5일",
+      "10일",
+      "30일",
+      "59일",
+      "103일"
+    ]
+  },
+  "y_axis": {
+    "name": "병균 감염률",
+    "unit": "()",
+    "is_inferred": false,
+    "scale": "linear",
+    "ticks_examples": [
+      "1%",
+      "5%",
+      "10%",
+      "15%",
+      "20%",
+      "25%",
+      "30%",
+      "35%",
+      "40%",
+      "45%",
+      "50%",
+      "55%",
+      "60%",
+      "65%",
+      "70%",
+      "75%",
+      "80%",
+      "85%",
+      "90%",
+      "95%",
+      "100%"
+    ]
+  },
+  "legend": {
+    "present": true,
+    "labels": [
+      "Redcar(명)",
+      "Schwelgem(명)",
+      "P-3 BF",
+      "Lianwern(명)",
+      "도한다-1"
+    ],
+    "location_hint": null
+  },
+  "subplots": [
+    {
+      "title": "병균 감염률",
+      "x_axis": {
+        "name": "휴대일수",
+        "unit": "일",
+        "is_inferred": false,
+        "scale": "time",
+        "ticks_examples": [
+          "1일",
+          "5일",
+          "10일",
+          "30일",
+          "59일",
+          "103일"
+        ]
+      },
+      "y_axis": {
+        "name": "병균 감염률",
+        "unit": "()",
+        "is_inferred": false,
+        "scale": "linear",
+        "ticks_examples": [
+          "1%",
+          "5%",
+          "10%",
+          "15%",
+          "20%",
+          "25%",
+          "30%",
+          "35%",
+          "40%",
+          "45%",
+          "50%",
+          "55%",
+          "60%",
+          "65%",
+          "70%",
+          "75%",
+          "80%",
+          "85%",
+          "90%",
+          "95%",
+          "100%"
+        ]
+      },
+      "series": [
+        {
+          "name": "Redcar(명)",
+          "style": {
+            "color_name": "none",
+            "style_hint": "none",
+            "marker": "none"
+          },
+          "legend_label": "Redcar(명)"
+        },
+        {
+          "name": "Schwelgem(명)",
+          "style": {
+            "color_name": "none",
+            "style_hint": "none",
+            "marker": "none"
+          },
+          "legend_label": "Schwelgem(명)"
+        },
+        {
+          "name": "P-3 BF",
+          "style": {
+            "color_name": "none",
+            "style_hint": "none",
+            "marker": "none"
+          },
+          "legend_label": "P-3 BF"
+        },
+        {
+          "name": "Lianwern(명)",
+          "style": {
+            "color_name": "none",
+            "style_hint": "none",
+            "marker": "none"
+          },
+          "legend_label": "Lianwern(명)"
+        },
+        {
+          "name": "도한다-1",
+          "style": {
+            "color_name": "none",
+            "style_hint": "none",
+            "marker": "none"
+          },
+          "legend_label": "도한다-1"
+        }
+      ],
+      "bbox": null
+    }
+  ],
+  "annotations_present": true,
+  "annotations": [
+    {
+      "text": "1개월(감염율 65%)",
+      "bbox": null
+    },
+    {
+      "text": "10일(감염율 53%)",
+      "bbox": null
+    },
+    {
+      "text": "5일(감염율 32%)",
+      "bbox": null
+    },
+    {
+      "text": "P-3 BF",
+      "bbox": null
+    },
+    {
+      "text": "Schwelgem(명)",
+      "bbox": null
+    },
+    {
+      "text": "Lianwern(명)",
+      "bbox": null
+    },
+    {
+      "text": "도한다-1",
+      "bbox": null
+    },
+    {
+      "text": "10일내외 병균 감염률과 병균 감염기간의 관계선",
+      "bbox": null
+    }
+  ],
+  "data_series_count": 5,
+  "table_like": false,
+  "caption_nearby": "병균 감염률과 병균 감염기간의 관계선",
+  "key_phrases": [
+    "병균 감염률",
+    "병균 감염기간",
+    "병균 감염률과 병균 감염기간의 관계선"
+  ],
+  "secondary_y_axis": null,
+  "grid_present": true,
+  "background_image_present": false,
+  "quality_flags": {
+    "low_resolution": false,
+    "cropped_or_cutoff": false,
+    "non_korean_text_present": false,
+    "heavy_watermark": false,
+    "skew_or_perspective": false
+  },
+  "confidence": 90.0,
+  "source": {
+    "source_pdf": null,
+    "page_number": null,
+    "image_path": "./data/images/g_1.png",
+    "image_sha1": "0896939912d7717e335d527f0b542e5d168267b5",
+    "bbox": null
+  },
+  "extra": {}
+}

@@ -1,0 +1,150 @@
+{
+  "is_chart": true,
+  "chart_type": "line",
+  "orientation": "vertical",
+  "title": {
+    "text": null,
+    "is_inferred": false
+  },
+  "x_axis": {
+    "name": "X",
+    "unit": "unit",
+    "is_inferred": false,
+    "scale": "categorical",
+    "ticks_examples": [
+      "A",
+      "B",
+      "C",
+      "D",
+      "E"
+    ]
+  },
+  "y_axis": {
+    "name": "Y",
+    "unit": "unit",
+    "is_inferred": false,
+    "scale": "categorical",
+    "ticks_examples": [
+      "A",
+      "B",
+      "C",
+      "D",
+      "E"
+    ]
+  },
+  "legend": {
+    "present": true,
+    "labels": [
+      "A",
+      "B",
+      "C",
+      "D",
+      "E"
+    ],
+    "location_hint": null
+  },
+  "subplots": [
+    {
+      "title": null,
+      "x_axis": {
+        "name": "X",
+        "unit": "unit",
+        "is_inferred": false,
+        "scale": "categorical",
+        "ticks_examples": [
+          "A",
+          "B",
+          "C",
+          "D",
+          "E"
+        ]
+      },
+      "y_axis": {
+        "name": "Y",
+        "unit": "unit",
+        "is_inferred": false,
+        "scale": "categorical",
+        "ticks_examples": [
+          "A",
+          "B",
+          "C",
+          "D",
+          "E"
+        ]
+      },
+      "series": [
+        {
+          "name": "A",
+          "style": {
+            "color_name": "A",
+            "style_hint": "solid",
+            "marker": "circle"
+          },
+          "legend_label": "A"
+        },
+        {
+          "name": "B",
+          "style": {
+            "color_name": "B",
+            "style_hint": "dashed",
+            "marker": "square"
+          },
+          "legend_label": "B"
+        },
+        {
+          "name": "C",
+          "style": {
+            "color_name": "C",
+            "style_hint": "dotted",
+            "marker": "triangle"
+          },
+          "legend_label": "C"
+        },
+        {
+          "name": "D",
+          "style": {
+            "color_name": "D",
+            "style_hint": "dashed",
+            "marker": "diamond"
+          },
+          "legend_label": "D"
+        },
+        {
+          "name": "E",
+          "style": {
+            "color_name": "E",
+            "style_hint": "dashed",
+            "marker": "cross"
+          },
+          "legend_label": "E"
+        }
+      ],
+      "bbox": null
+    }
+  ],
+  "annotations_present": false,
+  "annotations": [],
+  "data_series_count": 5,
+  "table_like": false,
+  "caption_nearby": null,
+  "key_phrases": [],
+  "secondary_y_axis": null,
+  "grid_present": true,
+  "background_image_present": false,
+  "quality_flags": {
+    "low_resolution": false,
+    "cropped_or_cutoff": false,
+    "non_korean_text_present": false,
+    "heavy_watermark": false,
+    "skew_or_perspective": false
+  },
+  "confidence": 90.0,
+  "source": {
+    "source_pdf": null,
+    "page_number": null,
+    "image_path": "./data/images/g_4.png",
+    "image_sha1": "bd898a81222af012781534618ebcf2ce8c17e0a7",
+    "bbox": null
+  },
+  "extra": {}
+}
