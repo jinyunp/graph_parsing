@@ -3,7 +3,7 @@ import os
 BACKEND = os.environ.get("BACKEND", "hf").lower()
 
 # HF Transformers
-HF_MODEL_ID = os.environ.get("HF_MODEL_ID", "models/Qwen2.5-VL-7B-Instruct")
+HF_MODEL_ID = os.environ.get("HF_MODEL_ID", "models/Qwen2.5-VL-3B-Instruct")
 HF_DTYPE = os.environ.get("HF_DTYPE", "auto")  # 'auto' | 'float16' | 'bfloat16' | 'float32'
 HF_DEVICE_MAP = os.environ.get("HF_DEVICE_MAP", "auto")
 HF_TRUST_REMOTE_CODE = os.environ.get("HF_TRUST_REMOTE_CODE", "true").lower() == "true"
