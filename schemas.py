@@ -3,9 +3,6 @@ from dataclasses import dataclass, field, asdict
 from enum import Enum
 from typing import List, Optional, Dict, Any
 
-# -----------------------------
-# 1) Enum
-# -----------------------------
 class ChartType(str, Enum):
     line = "line"
     bar = "bar"
@@ -43,9 +40,6 @@ class MarkerType(str, Enum):
     plus = "plus"
     other = "other"
 
-# -----------------------------
-# 2) 레이아웃/출처/품질
-# -----------------------------
 @dataclass
 class BBox:
     x0: float
@@ -69,9 +63,6 @@ class QualityFlags:
     heavy_watermark: bool = False
     skew_or_perspective: bool = False
 
-# -----------------------------
-# 3) 텍스트 요소
-# -----------------------------
 @dataclass
 class TitleField:
     text: Optional[str] = None
@@ -96,9 +87,6 @@ class AnnotationItem:
     text: str
     bbox: Optional[BBox] = None
 
-# -----------------------------
-# 4) 시리즈/서브플롯
-# -----------------------------
 @dataclass
 class SeriesStyle:
     color_name: Optional[str] = None
@@ -119,43 +107,30 @@ class SubplotMeta:
     series: List[DataSeries] = field(default_factory=list)
     bbox: Optional[BBox] = None
 
-# -----------------------------
-# 5) 최상위 차트 메타
-# -----------------------------
 @dataclass
 class ChartMetadata:
     is_chart: bool
     chart_type: Optional[ChartType] = None
     orientation: Orientation = Orientation.unknown
-
     title: TitleField = field(default_factory=TitleField)
     x_axis: AxisField = field(default_factory=AxisField)
     y_axis: AxisField = field(default_factory=AxisField)
     legend: LegendField = field(default_factory=LegendField)
-
     subplots: List[SubplotMeta] = field(default_factory=list)
-
     annotations_present: bool = False
     annotations: List[AnnotationItem] = field(default_factory=list)
     data_series_count: Optional[int] = None
     table_like: bool = False
-
     caption_nearby: Optional[str] = None
     key_phrases: List[str] = field(default_factory=list)
-
     secondary_y_axis: Optional[AxisField] = None
     grid_present: Optional[bool] = None
     background_image_present: Optional[bool] = None
-
     quality_flags: QualityFlags = field(default_factory=QualityFlags)
     confidence: float = 0.0
     source: SourceRef = field(default_factory=SourceRef)
-
     extra: Dict[str, Any] = field(default_factory=dict)
 
-# -----------------------------
-# 직렬화 유틸
-# -----------------------------
 def to_json_dict(meta: ChartMetadata) -> Dict[str, Any]:
     def _normalize(obj):
         if isinstance(obj, Enum):

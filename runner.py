@@ -4,8 +4,12 @@ import requests
 from typing import List
 
 from config import (
+    BACKEND,
     INPUT_MODE, INPUT_IMAGE_DIR, INPUT_IMAGE_PATH,
-    OUTPUT_JSON_DIR, SAVE_NON_CHART_JSON, OLLAMA_HOST, VLM_MODEL
+    OUTPUT_JSON_DIR, OUTPUT_RAW_DIR,
+    SAVE_NON_CHART_JSON, SAVE_RAW_RESPONSE,
+    OLLAMA_HOST, OLLAMA_MODEL,
+    OPENROUTER_API_KEY, OPENROUTER_MODEL, OPENROUTER_BASE_URL
 )
 from vlm_client import infer_chart_metadata_from_image
 from schemas import to_json_dict
@@ -14,6 +18,7 @@ SUPPORTED_EXTS = {".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff", ".webp"}
 
 def _ensure_dirs():
     os.makedirs(OUTPUT_JSON_DIR, exist_ok=True)
+    os.makedirs(OUTPUT_RAW_DIR, exist_ok=True)
 
 def _list_images(folder: str) -> List[str]:
     images = []
@@ -28,31 +33,63 @@ def _is_supported(path: str) -> bool:
     return os.path.splitext(path)[1].lower() in SUPPORTED_EXTS
 
 def _preflight():
-    tags_url = f"{OLLAMA_HOST.rstrip('/')}/api/tags"
-    try:
-        r = requests.get(tags_url, timeout=10)
-        r.raise_for_status()
-    except Exception as e:
-        raise RuntimeError(
-            f"[사전 점검 실패] Ollama 서버에 연결할 수 없습니다: {tags_url}\n"
-            f"- Ollama 실행: `ollama serve` 또는 `ollama run {VLM_MODEL}`\n"
-            f"- OLLAMA_HOST 확인: 현재 '{OLLAMA_HOST}'\n"
-            f"- 방화벽/프록시 확인\n원인: {e}"
-        ) from e
-
-    tags = r.json().get("models", [])
-    names = {m.get("name") for m in tags}
-    if VLM_MODEL not in names:
-        raise RuntimeError(
-            f"[모델 없음] '{VLM_MODEL}' 미설치.\n"
-            f"- 설치: `ollama pull {VLM_MODEL}`\n"
-            f"- 설치 목록: {sorted(list(names))}"
-        )
+    if BACKEND == "openrouter":
+        if not OPENROUTER_API_KEY:
+            raise RuntimeError("[사전 점검 실패] OPENROUTER_API_KEY 가 설정되지 않았습니다.")
+        try:
+            r = requests.get(f"{OPENROUTER_BASE_URL.rstrip('/')}/models", timeout=10,
+                             headers={"Authorization": f"Bearer {OPENROUTER_API_KEY}"})
+            if r.status_code not in (200, 401, 403):
+                print(f"[경고] OpenRouter /models 상태코드: {r.status_code}")
+        except Exception as e:
+            print(f"[경고] OpenRouter 접근 확인 중 문제: {e}")
+        print(f"[백엔드] OpenRouter / 모델: {OPENROUTER_MODEL}")
+    else:
+        tags_url = f"{OLLAMA_HOST.rstrip('/')}/api/tags"
+        try:
+            r = requests.get(tags_url, timeout=10)
+            r.raise_for_status()
+        except Exception as e:
+            raise RuntimeError(
+                f"[사전 점검 실패] Ollama 서버에 연결할 수 없습니다: {tags_url}\n"
+                f"- Ollama 실행: `ollama serve` 또는 `ollama run {OLLAMA_MODEL}`\n"
+                f"- OLLAMA_HOST 확인: 현재 '{OLLAMA_HOST}'\n"
+                f"- 방화벽/프록시 확인\n원인: {e}"
+            ) from e
+        print(f"[백엔드] Ollama / 모델: {OLLAMA_MODEL}")
 
 def _save_json(meta, out_path: str):
     with open(out_path, "w", encoding="utf-8") as f:
         json.dump(to_json_dict(meta), f, ensure_ascii=False, indent=2)
-    print(f"    + 저장: {out_path}")
+    print(f"    + 구조화 JSON 저장: {out_path}")
+
+def _save_raw(base_name: str, raw_text: str, raw_http_json: dict):
+    raw_txt_path = os.path.join(OUTPUT_RAW_DIR, f"{base_name}.raw.txt")
+    raw_json_path = os.path.join(OUTPUT_RAW_DIR, f"{base_name}.raw.http.json")
+    with open(raw_txt_path, "w", encoding="utf-8") as f:
+        f.write(raw_text)
+    with open(raw_json_path, "w", encoding="utf-8") as f:
+        json.dump(raw_http_json, f, ensure_ascii=False, indent=2)
+    print(f"    + 원본 응답 저장: {raw_txt_path}, {raw_json_path}")
+
+def process_path(img_path: str):
+    print(f"  - 분석: {img_path}")
+    try:
+        meta, raw_text, raw_http_json = infer_chart_metadata_from_image(img_path)
+    except Exception as e:
+        print(f"    * 실패: {e}")
+        return
+
+    base = os.path.splitext(os.path.basename(img_path))[0]
+
+    out_path = os.path.join(OUTPUT_JSON_DIR, f"{base}.json")
+    if meta.is_chart or SAVE_NON_CHART_JSON:
+        _save_json(meta, out_path)
+    else:
+        print("    * 차트 아님 → 저장 생략 (config.SAVE_NON_CHART_JSON=False)")
+
+    if SAVE_RAW_RESPONSE:
+        _save_raw(base, raw_text, raw_http_json)
 
 def process_folder(img_dir: str):
     print(f"[Images folder] {img_dir}")
@@ -60,22 +97,8 @@ def process_folder(img_dir: str):
     if not images:
         print("이미지 파일이 없습니다. PNG/JPG/JPEG/BMP/TIF/TIFF/WEBP 지원.")
         return
-
     for img_path in images:
-        print(f"  - 분석: {img_path}")
-        try:
-            meta = infer_chart_metadata_from_image(img_path)
-        except Exception as e:
-            print(f"    * 실패: {e}")
-            continue
-
-        if not meta.is_chart and not SAVE_NON_CHART_JSON:
-            print("    * 차트 아님 → 저장 생략 (config.SAVE_NON_CHART_JSON=False)")
-            continue
-
-        base = os.path.splitext(os.path.basename(img_path))[0]
-        out_path = os.path.join(OUTPUT_JSON_DIR, f"{base}.json")
-        _save_json(meta, out_path)
+        process_path(img_path)
 
 def process_single(img_path: str):
     print(f"[Single image] {img_path}")
@@ -85,20 +108,7 @@ def process_single(img_path: str):
     if not _is_supported(img_path):
         print("지원하지 않는 확장자입니다. PNG/JPG/JPEG/BMP/TIF/TIFF/WEBP", img_path)
         return
-
-    try:
-        meta = infer_chart_metadata_from_image(img_path)
-    except Exception as e:
-        print(f"    * 실패: {e}")
-        return
-
-    if not meta.is_chart and not SAVE_NON_CHART_JSON:
-        print("    * 차트 아님 → 저장 생략 (config.SAVE_NON_CHART_JSON=False)")
-        return
-
-    base = os.path.splitext(os.path.basename(img_path))[0]
-    out_path = os.path.join(OUTPUT_JSON_DIR, f"{base}.json")
-    _save_json(meta, out_path)
+    process_path(img_path)
 
 def main():
     _ensure_dirs()
