@@ -1,3 +1,9 @@
 # 보안 파일
 data/*
 out/*
+
+# 가상환경
+.venv
+
+# VLM
+models

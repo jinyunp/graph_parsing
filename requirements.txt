@@ -1,3 +1,10 @@
+transformers>=4.43.0
+accelerate>=0.30.0
+torch>=2.2.0
+torchvision>=0.17.0
+pillow
 requests
 tenacity
-pillow
+safetensors
+# optional (GPU 성능)
+# flash-attn

@@ -1,15 +1,10 @@
-import os
-import json
-import requests
+import os, json, requests
 from typing import List
 
 from config import (
-    BACKEND,
-    INPUT_MODE, INPUT_IMAGE_DIR, INPUT_IMAGE_PATH,
-    OUTPUT_JSON_DIR, OUTPUT_RAW_DIR,
-    SAVE_NON_CHART_JSON, SAVE_RAW_RESPONSE,
-    OLLAMA_HOST, OLLAMA_MODEL,
-    OPENROUTER_API_KEY, OPENROUTER_MODEL, OPENROUTER_BASE_URL
+    BACKEND, INPUT_MODE, INPUT_IMAGE_DIR, INPUT_IMAGE_PATH,
+    OUTPUT_JSON_DIR, OUTPUT_RAW_DIR, SAVE_NON_CHART_JSON, SAVE_RAW_RESPONSE,
+    HF_MODEL_ID, DEBUG
 )
 from vlm_client import infer_chart_metadata_from_image
 from schemas import to_json_dict
@@ -33,30 +28,10 @@ def _is_supported(path: str) -> bool:
     return os.path.splitext(path)[1].lower() in SUPPORTED_EXTS
 
 def _preflight():
-    if BACKEND == "openrouter":
-        if not OPENROUTER_API_KEY:
-            raise RuntimeError("[사전 점검 실패] OPENROUTER_API_KEY 가 설정되지 않았습니다.")
-        try:
-            r = requests.get(f"{OPENROUTER_BASE_URL.rstrip('/')}/models", timeout=10,
-                             headers={"Authorization": f"Bearer {OPENROUTER_API_KEY}"})
-            if r.status_code not in (200, 401, 403):
-                print(f"[경고] OpenRouter /models 상태코드: {r.status_code}")
-        except Exception as e:
-            print(f"[경고] OpenRouter 접근 확인 중 문제: {e}")
-        print(f"[백엔드] OpenRouter / 모델: {OPENROUTER_MODEL}")
+    if BACKEND == "hf":
+        print(f"[백엔드] HF Transformers / 모델: {HF_MODEL_ID}")
     else:
-        tags_url = f"{OLLAMA_HOST.rstrip('/')}/api/tags"
-        try:
-            r = requests.get(tags_url, timeout=10)
-            r.raise_for_status()
-        except Exception as e:
-            raise RuntimeError(
-                f"[사전 점검 실패] Ollama 서버에 연결할 수 없습니다: {tags_url}\n"
-                f"- Ollama 실행: `ollama serve` 또는 `ollama run {OLLAMA_MODEL}`\n"
-                f"- OLLAMA_HOST 확인: 현재 '{OLLAMA_HOST}'\n"
-                f"- 방화벽/프록시 확인\n원인: {e}"
-            ) from e
-        print(f"[백엔드] Ollama / 모델: {OLLAMA_MODEL}")
+        print(f"[백엔드] {BACKEND} 모드는 runner에서 추가 네트워크 체크가 없습니다. (호출시 에러 출력)")
 
 def _save_json(meta, out_path: str):
     with open(out_path, "w", encoding="utf-8") as f:
