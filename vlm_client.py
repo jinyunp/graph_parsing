@@ -1,14 +1,16 @@
-import base64, json, hashlib, requests, os
-from tenacity import retry, stop_after_attempt, wait_fixed
+import base64, json, hashlib, requests, os, traceback
+from tenacity import retry, stop_after_attempt, wait_fixed, retry_if_exception_type
 from typing import Tuple, Dict, Any
+from PIL import Image, ImageFile
+ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 from schemas import *
 from config import (
     BACKEND,
-    HF_MODEL_ID, HF_DTYPE, HF_DEVICE_MAP, HF_TRUST_REMOTE_CODE, HF_MAX_NEW_TOKENS, HF_USE_FLASH_ATTN,
+    HF_MODEL_ID, HF_DTYPE, HF_DEVICE_MAP, HF_TRUST_REMOTE_CODE, HF_MAX_NEW_TOKENS, HF_USE_FLASH_ATTN, HF_OFFLOAD_FOLDER,
     OLLAMA_HOST, OLLAMA_MODEL,
     OPENROUTER_API_KEY, OPENROUTER_MODEL, OPENROUTER_BASE_URL, OPENROUTER_HTTP_REFERER, OPENROUTER_TITLE, OPENROUTER_FORCE_JSON,
-    KEYWORDS_MIN, KEYWORDS_MAX, DEBUG
+    KEYWORDS_MIN, KEYWORDS_MAX, DEBUG, DEBUG_TRACE
 )
 
 SYSTEM_PROMPT = (
@@ -17,15 +19,18 @@ SYSTEM_PROMPT = (
     "If the image is not a chart/graph/plot, set \"is_chart\": false and fill unrelated fields with null/[]/false as appropriate.\n"
     "Use Korean for text copied from the image; when you infer text, set \"is_inferred\": true.\n"
 )
+
 USER_PROMPT = f"""
 아래 이미지를 보고, 다음 스키마를 만족하는 '단일 JSON 객체'만 출력해 주세요.
 
 요구 사항:
 - key_phrases는 그래프를 설명/검색에 유용한 **한국어 키워드**로 {KEYWORDS_MIN}~{KEYWORDS_MAX}개를 생성하세요.
 - 키워드는 명사/명사구 중심(필요시 간단 형용사 포함)으로, 중복/유의어 반복을 피하세요.
+
 반드시 JSON 객체만 출력하세요. 추가 설명/코드펜스 금지.
 """
 
+# ---------------------- 공통 유틸 ----------------------
 def _file_sha1(path: str) -> str:
     h = hashlib.sha1()
     with open(path, "rb") as f:
@@ -47,7 +52,20 @@ def _safe_json_loads(text: str) -> dict:
             return json.loads(t[:last+1])
         raise
 
-# ---------- Ollama/OpenRouter (유지) ----------
+def _torch_dtype_from_str(s):
+    if s == "auto": return None
+    import torch
+    return {"float16": torch.float16, "bfloat16": torch.bfloat16, "float32": torch.float32}.get(s, None)
+
+def _safe_open_image(path: str, max_side: int = 2048) -> Image.Image:
+    img = Image.open(path).convert("RGB")
+    w, h = img.size
+    if max(w, h) > max_side:
+        r = max_side / float(max(w, h))
+        img = img.resize((int(w*r), int(h*r)))
+    return img
+
+# ---------------------- Ollama/OpenRouter ----------------------
 def _img_to_b64(path: str) -> str:
     with open(path, "rb") as f:
         return base64.b64encode(f.read()).decode("utf-8")
@@ -101,7 +119,7 @@ def _call_openrouter(image_path: str) -> Dict[str, Any]:
         raise RuntimeError(f"[OpenRouter HTTP 오류] {resp.status_code}\n본문: {resp.text[:2000]}")
     return resp.json()
 
-# ---------- HF Transformers (로컬) ----------
+# ---------------------- HF Transformers (Qwen2.5 대응 강화) ----------------------
 _HF_MODEL = None
 _HF_PROCESSOR = None
 
@@ -109,36 +127,86 @@ def _ensure_hf_loaded():
     global _HF_MODEL, _HF_PROCESSOR
     if _HF_MODEL is not None:
         return
-    from transformers import Qwen2VLForConditionalGeneration, AutoProcessor
-    dtype = None if HF_DTYPE == "auto" else HF_DTYPE
-    attn_impl = {"attn_implementation": "flash_attention_2"} if HF_USE_FLASH_ATTN else {}
-    _HF_MODEL = Qwen2VLForConditionalGeneration.from_pretrained(
-        HF_MODEL_ID, device_map=HF_DEVICE_MAP, torch_dtype=dtype, trust_remote_code=HF_TRUST_REMOTE_CODE, **attn_impl
+    from transformers import AutoConfig, AutoProcessor, AutoModelForCausalLM, AutoModelForVision2Seq
+    dtype = _torch_dtype_from_str(HF_DTYPE)
+    attn_kwargs = {"attn_implementation": "flash_attention_2"} if HF_USE_FLASH_ATTN else {}
+
+    cfg = AutoConfig.from_pretrained(HF_MODEL_ID, trust_remote_code=HF_TRUST_REMOTE_CODE)
+    model_type = getattr(cfg, "model_type", "") or ""
+
+    common_kwargs = dict(
+        device_map=HF_DEVICE_MAP,
+        torch_dtype=dtype,
+        trust_remote_code=HF_TRUST_REMOTE_CODE,
+        **attn_kwargs
     )
+    if HF_OFFLOAD_FOLDER:
+        os.makedirs(HF_OFFLOAD_FOLDER, exist_ok=True)
+        common_kwargs["offload_folder"] = HF_OFFLOAD_FOLDER
+
+    try:
+        if "qwen3_vl" in model_type or "qwen2_5_vl" in model_type:
+            # Qwen3-VL / Qwen2.5-VL → CausalLM 경로 우선
+            _HF_MODEL = AutoModelForCausalLM.from_pretrained(HF_MODEL_ID, **common_kwargs)
+        elif "qwen2_vl" in model_type:
+            # Qwen2-VL 구형
+            try:
+                from transformers import Qwen2VLForConditionalGeneration
+                _HF_MODEL = Qwen2VLForConditionalGeneration.from_pretrained(HF_MODEL_ID, **common_kwargs)
+            except Exception:
+                _HF_MODEL = AutoModelForVision2Seq.from_pretrained(HF_MODEL_ID, **common_kwargs)
+        else:
+            # 기타 비전-언어 모델 일반 경로
+            _HF_MODEL = AutoModelForVision2Seq.from_pretrained(HF_MODEL_ID, **common_kwargs)
+    except OSError as e:
+        if DEBUG:
+            print("[HF LOAD OSError]", str(e))
+        if DEBUG_TRACE:
+            traceback.print_exc()
+        raise
+
     _HF_PROCESSOR = AutoProcessor.from_pretrained(HF_MODEL_ID, trust_remote_code=HF_TRUST_REMOTE_CODE)
 
 def _call_hf(image_path: str) -> Dict[str, Any]:
-    from PIL import Image
     import torch
     _ensure_hf_loaded()
-    img = Image.open(image_path).convert("RGB")
+    try:
+        img = _safe_open_image(image_path)
+    except OSError as e:
+        if DEBUG:
+            print("[IMAGE OSError]", str(e))
+        if DEBUG_TRACE:
+            traceback.print_exc()
+        raise
 
-    conversation = [
+    # 공통 대화 템플릿 (Qwen2.5/Qwen3 모두 호환)
+    messages = [
         {"role": "system", "content": [{"type": "text", "text": SYSTEM_PROMPT}]},
         {"role": "user", "content": [{"type": "image", "image": img}, {"type": "text", "text": USER_PROMPT}]},
     ]
-    inputs = _HF_PROCESSOR.apply_chat_template(
-        conversation, add_generation_prompt=True, tokenize=True, return_tensors="pt", return_dict=True
-    ).to(_HF_MODEL.device)
 
-    with torch.no_grad():
-        out_tokens = _HF_MODEL.generate(**inputs, max_new_tokens=HF_MAX_NEW_TOKENS, do_sample=False)
-    gen_ids = [out_tokens[len(inp_ids):] for inp_ids, out_tokens in zip(inputs.input_ids, out_tokens)]
-    text = _HF_PROCESSOR.batch_decode(gen_ids, skip_special_tokens=True, clean_up_tokenization_spaces=True)[0]
+    text = _HF_PROCESSOR.apply_chat_template(messages, add_generation_prompt=True, tokenize=False)
+    inputs = _HF_PROCESSOR(text=[text], images=[img], return_tensors="pt").to(_HF_MODEL.device)
 
-    return {"backend": "hf", "model": HF_MODEL_ID, "message": {"content": text}}
+    try:
+        with torch.no_grad():
+            out_tokens = _HF_MODEL.generate(**inputs, max_new_tokens=HF_MAX_NEW_TOKENS, do_sample=False)
+    except OSError as e:
+        if DEBUG:
+            print("[GENERATE OSError]", str(e))
+        if DEBUG_TRACE:
+            traceback.print_exc()
+        raise
 
-@retry(stop=stop_after_attempt(3), wait=wait_fixed(1))
+    out_text = _HF_PROCESSOR.batch_decode(
+        out_tokens[:, inputs.input_ids.shape[1]:],
+        skip_special_tokens=True
+    )[0].strip()
+
+    return {"backend": "hf", "model": HF_MODEL_ID, "message": {"content": out_text}}
+
+# OSError는 재시도하지 않고 즉시 실패
+@retry(stop=stop_after_attempt(3), wait=wait_fixed(1), retry=retry_if_exception_type((RuntimeError,)))
 def infer_chart_metadata_from_image(image_path: str) -> Tuple[ChartMetadata, str, Dict[str, Any]]:
     if BACKEND == "openrouter":
         raw_http = _call_openrouter(image_path)
@@ -151,24 +219,20 @@ def infer_chart_metadata_from_image(image_path: str) -> Tuple[ChartMetadata, str
         raw_text = (raw_http.get("message") or {}).get("content", "") or ""
 
     if not raw_text.strip():
-        raise RuntimeError("모델 응답 content가 비어있습니다.")
+        raise RuntimeError("모델 응답 content가 비어있습니다. (모델/백엔드 확인)")
 
     data = _safe_json_loads(raw_text)
     data.setdefault("source", {})
     data["source"]["image_path"] = image_path
     data["source"]["image_sha1"] = _file_sha1(image_path)
 
-    # dataclass 매핑 (간략)
     def _coerce_enum(val, enum_cls, default):
         try:
-            if val is None:
-                return default
+            if val is None: return default
             return enum_cls(val)
-        except Exception:
-            return default
+        except: return default
     def _build_axis(d):
-        if d is None:
-            return AxisField()
+        if d is None: return AxisField()
         return AxisField(
             name=d.get("name"), unit=d.get("unit"),
             is_inferred=bool(d.get("is_inferred", False)),

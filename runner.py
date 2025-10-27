@@ -1,10 +1,9 @@
-import os, json, requests
+import os, json
 from typing import List
-
 from config import (
     BACKEND, INPUT_MODE, INPUT_IMAGE_DIR, INPUT_IMAGE_PATH,
     OUTPUT_JSON_DIR, OUTPUT_RAW_DIR, SAVE_NON_CHART_JSON, SAVE_RAW_RESPONSE,
-    HF_MODEL_ID, DEBUG
+    HF_MODEL_ID
 )
 from vlm_client import infer_chart_metadata_from_image
 from schemas import to_json_dict
@@ -31,7 +30,7 @@ def _preflight():
     if BACKEND == "hf":
         print(f"[백엔드] HF Transformers / 모델: {HF_MODEL_ID}")
     else:
-        print(f"[백엔드] {BACKEND} 모드는 runner에서 추가 네트워크 체크가 없습니다. (호출시 에러 출력)")
+        print(f"[백엔드] {BACKEND} (네트워크 체크는 생략)")
 
 def _save_json(meta, out_path: str):
     with open(out_path, "w", encoding="utf-8") as f:
@@ -54,15 +53,12 @@ def process_path(img_path: str):
     except Exception as e:
         print(f"    * 실패: {e}")
         return
-
     base = os.path.splitext(os.path.basename(img_path))[0]
-
     out_path = os.path.join(OUTPUT_JSON_DIR, f"{base}.json")
     if meta.is_chart or SAVE_NON_CHART_JSON:
         _save_json(meta, out_path)
     else:
         print("    * 차트 아님 → 저장 생략 (config.SAVE_NON_CHART_JSON=False)")
-
     if SAVE_RAW_RESPONSE:
         _save_raw(base, raw_text, raw_http_json)
 
@@ -78,17 +74,14 @@ def process_folder(img_dir: str):
 def process_single(img_path: str):
     print(f"[Single image] {img_path}")
     if not os.path.exists(img_path):
-        print("경로에 파일이 없습니다.", img_path)
-        return
+        print("경로에 파일이 없습니다.", img_path); return
     if not _is_supported(img_path):
-        print("지원하지 않는 확장자입니다. PNG/JPG/JPEG/BMP/TIF/TIFF/WEBP", img_path)
-        return
+        print("지원하지 않는 확장자입니다. PNG/JPG/JPEG/BMP/TIF/TIFF/WEBP", img_path); return
     process_path(img_path)
 
 def main():
     _ensure_dirs()
     _preflight()
-
     mode = INPUT_MODE.strip().lower()
     if mode == "folder":
         process_folder(INPUT_IMAGE_DIR)
