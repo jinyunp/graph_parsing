@@ -1,9 +1,11 @@
 # 보안 파일
-data/*
+data/images/*
+!data/images/
 out/*
 
 # 가상환경
 .venv
 
 # VLM
-models/
+models/*
+!models/

@@ -5,6 +5,7 @@ from PIL import Image, ImageFile
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 from schemas import *
+from prompts_chart_keywords import SYSTEM_PROMPT, make_user_prompt
 from config import (
     BACKEND,
     HF_MODEL_ID, HF_DTYPE, HF_DEVICE_MAP, HF_TRUST_REMOTE_CODE, HF_MAX_NEW_TOKENS, HF_USE_FLASH_ATTN, HF_OFFLOAD_FOLDER,
@@ -13,22 +14,7 @@ from config import (
     KEYWORDS_MIN, KEYWORDS_MAX, DEBUG, DEBUG_TRACE
 )
 
-SYSTEM_PROMPT = (
-    "You are a meticulous vision-language analyst that extracts structured metadata from technical charts.\n"
-    "Return ONLY one JSON object that follows the provided schema. No code fences, no extra text.\n"
-    "If the image is not a chart/graph/plot, set \"is_chart\": false and fill unrelated fields with null/[]/false as appropriate.\n"
-    "Use Korean for text copied from the image; when you infer text, set \"is_inferred\": true.\n"
-)
-
-USER_PROMPT = f"""
-아래 이미지를 보고, 다음 스키마를 만족하는 '단일 JSON 객체'만 출력해 주세요.
-
-요구 사항:
-- key_phrases는 그래프를 설명/검색에 유용한 **한국어 키워드**로 {KEYWORDS_MIN}~{KEYWORDS_MAX}개를 생성하세요.
-- 키워드는 명사/명사구 중심(필요시 간단 형용사 포함)으로, 중복/유의어 반복을 피하세요.
-
-반드시 JSON 객체만 출력하세요. 추가 설명/코드펜스 금지.
-"""
+USER_PROMPT = make_user_prompt(KEYWORDS_MIN, KEYWORDS_MAX)
 
 # ---------------------- 공통 유틸 ----------------------
 def _file_sha1(path: str) -> str:
@@ -77,6 +63,7 @@ def _img_b64_data_url(path: str) -> str:
 
 def _call_ollama(image_path: str) -> Dict[str, Any]:
     url = f"{OLLAMA_HOST.rstrip('/')}/api/chat"
+    
     payload = {
         "model": OLLAMA_MODEL,
         "stream": False,
@@ -127,7 +114,7 @@ def _ensure_hf_loaded():
     global _HF_MODEL, _HF_PROCESSOR
     if _HF_MODEL is not None:
         return
-    from transformers import AutoConfig, AutoProcessor, AutoModelForCausalLM, AutoModelForVision2Seq
+    from transformers import AutoConfig, AutoProcessor, AutoModelForVision2Seq
     dtype = _torch_dtype_from_str(HF_DTYPE)
     attn_kwargs = {"attn_implementation": "flash_attention_2"} if HF_USE_FLASH_ATTN else {}
 
@@ -147,7 +134,7 @@ def _ensure_hf_loaded():
     try:
         if "qwen3_vl" in model_type or "qwen2_5_vl" in model_type:
             # Qwen3-VL / Qwen2.5-VL → CausalLM 경로 우선
-            _HF_MODEL = AutoModelForCausalLM.from_pretrained(HF_MODEL_ID, **common_kwargs)
+            _HF_MODEL = AutoModelForVision2Seq.from_pretrained(HF_MODEL_ID, **common_kwargs)
         elif "qwen2_vl" in model_type:
             # Qwen2-VL 구형
             try:
