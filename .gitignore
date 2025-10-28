@@ -1,7 +1,5 @@
 # 보안 파일
 data/images/*
-!data/images
-
 out/*
 
 # 가상환경
