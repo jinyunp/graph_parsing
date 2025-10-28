@@ -1,0 +1,11 @@
+# 최신 Qwen2.5/Qwen3 VL 지원 위해 상향
+transformers>=4.45.0
+accelerate>=0.30.0
+torch>=2.2.0
+torchvision>=0.17.0
+pillow
+requests
+tenacity
+safetensors
+# optional (GPU 성능)
+# flash-attn
