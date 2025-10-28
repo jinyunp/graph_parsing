@@ -78,6 +78,7 @@ def make_user_prompt(keywords_min: int = 10, keywords_max: int = 15) -> str:
         f"- 그 다음, 추출된 구조 정보만을 근거로 key_phrases를 한국어로 {keywords_min}~{keywords_max}개 추론 생성하세요.\n"
         "  • 명사/명사구 중심(필요 시 간단 형용사 포함)\n"
         "  • 그래프 의미에 대해 포함할 수 있는 phrase 생성\n"
+        "  • 그래프에 인식되는 값들에 대한 관계를 작성\n"
         "  • 중복/유의어 반복 금지\n"
         "  • 워터마크/파일명/난수형 토큰/URL/이메일/그림·표 번호 등 OCR 잡음 금지\n"
         "- 확신이 없으면 null 또는 빈 배열을 사용하고 \"is_inferred\": false로 두세요(임의 추측 금지).\n"
