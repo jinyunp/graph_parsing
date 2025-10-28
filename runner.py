@@ -1,7 +1,7 @@
 import os, json
 from typing import List
 from config import (
-    BACKEND, INPUT_MODE, INPUT_IMAGE_DIR, INPUT_IMAGE_PATH,
+    INPUT_MODE, INPUT_IMAGE_DIR, INPUT_IMAGE_PATH,
     OUTPUT_JSON_DIR, OUTPUT_RAW_DIR, SAVE_NON_CHART_JSON, SAVE_RAW_RESPONSE,
     HF_MODEL_ID
 )
@@ -27,10 +27,7 @@ def _is_supported(path: str) -> bool:
     return os.path.splitext(path)[1].lower() in SUPPORTED_EXTS
 
 def _preflight():
-    if BACKEND == "hf":
-        print(f"[백엔드] HF Transformers / 모델: {HF_MODEL_ID}")
-    else:
-        print(f"[백엔드] {BACKEND} (네트워크 체크는 생략)")
+    print(f"[백엔드] HF Transformers / 모델: {HF_MODEL_ID}")
 
 def _save_json(meta, out_path: str):
     with open(out_path, "w", encoding="utf-8") as f:
@@ -48,19 +45,35 @@ def _save_raw(base_name: str, raw_text: str, raw_http_json: dict):
 
 def process_path(img_path: str):
     print(f"  - 분석: {img_path}")
+    base = os.path.splitext(os.path.basename(img_path))[0]
+    raw_text_forced = ""
+    raw_http_forced: dict = {}
+
     try:
-        meta, raw_text, raw_http_json = infer_chart_metadata_from_image(img_path)
+        meta, raw_text, raw_http_json, timings = infer_chart_metadata_from_image(img_path)
+        raw_text_forced, raw_http_forced = raw_text, raw_http_json  # 성공 시 raw 백업
+
+        # 시간 로깅
+        gen_sec = timings.get("gen_sec", 0.0)
+        struct_sec = timings.get("struct_sec", 0.0)
+        retry_flag = " (kw-retry)" if timings.get("keywords_retry") else ""
+        print(f"    + time: gen {gen_sec:.2f}s, struct {struct_sec:.2f}s, total {(gen_sec+struct_sec):.2f}s{retry_flag}")
+
+        out_path = os.path.join(OUTPUT_JSON_DIR, f"{base}.json")
+        if meta.is_chart or SAVE_NON_CHART_JSON:
+            _save_json(meta, out_path)
+        else:
+            print("    * 차트 아님 → 저장 생략 (config.SAVE_NON_CHART_JSON=False)")
+        if SAVE_RAW_RESPONSE:
+            _save_raw(base, raw_text, raw_http_json)
+
     except Exception as e:
         print(f"    * 실패: {e}")
-        return
-    base = os.path.splitext(os.path.basename(img_path))[0]
-    out_path = os.path.join(OUTPUT_JSON_DIR, f"{base}.json")
-    if meta.is_chart or SAVE_NON_CHART_JSON:
-        _save_json(meta, out_path)
-    else:
-        print("    * 차트 아님 → 저장 생략 (config.SAVE_NON_CHART_JSON=False)")
-    if SAVE_RAW_RESPONSE:
-        _save_raw(base, raw_text, raw_http_json)
+        # 예외여도 raw 저장 시도
+        if SAVE_RAW_RESPONSE:
+            if not raw_text_forced:
+                raw_text_forced = f"[EXCEPTION] {repr(e)}"
+            _save_raw(base, raw_text_forced, raw_http_forced)
 
 def process_folder(img_dir: str):
     print(f"[Images folder] {img_dir}")
