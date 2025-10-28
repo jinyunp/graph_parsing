@@ -1,6 +1,7 @@
 # 보안 파일
 data/images/*
-!data/images/
+!data/images
+!data
 out/*
 
 # 가상환경
@@ -8,4 +9,4 @@ out/*
 
 # VLM
 models/*
-!models/
+!models
