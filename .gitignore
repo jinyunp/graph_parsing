@@ -1,6 +1,5 @@
 # 보안 파일
 data/images/*
-!data
 !data/images
 
 out/*
