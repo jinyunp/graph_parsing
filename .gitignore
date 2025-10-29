@@ -2,7 +2,7 @@
 data/images/**
 out/**
 
-# 폴더 유
+# 폴더 유지
 !data/images/.gitkeep
 !models/.gitkeep
 
@@ -12,4 +12,4 @@ out/**
 # VLM
 models/**
 
-__pycache__/
+__pycache__
