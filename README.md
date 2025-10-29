@@ -8,7 +8,7 @@
 > **목표**: 폴더(또는 단일 파일)에 있는 **그래프 이미지**를 Vision-Language Model(VLM) **Qwen2.5-VL**(via **Ollama**, HF, OpenRouter)로 분석하여,
 > **일관된 dataclass 스키마(JSON)** 로 그래프 구조 및 **의미 중심 키워드**를 생성하고,
 > 이어서 **이미지 + 키워드 기반 의미 요약(semantic summary)** 를 자동 생성합니다.
-<br>
+
 > **GRAPH PARSER** : 그래프 이미지 → 구조화 메타데이터(JSON) + **의미 중심 키워드(10~15)** 추출  
 > **GRAPH ANALYZER** : 이미지 + 키워드 → **의미 중심 요약(semantic summary)** 생성/저장
 
