@@ -3,22 +3,6 @@ from dataclasses import dataclass, field, asdict
 from enum import Enum
 from typing import List, Optional, Dict, Any
 
-class ChartType(str, Enum):
-    line = "line"
-    bar = "bar"
-    stacked_bar = "stacked_bar"
-    histogram = "histogram"
-    scatter = "scatter"
-    area = "area"
-    boxplot = "boxplot"
-    violin = "violin"
-    heatmap = "heatmap"
-    pie = "pie"
-    donut = "donut"
-    timeline = "timeline"
-    mixed = "mixed"
-    other = "other"
-
 class ScaleType(str, Enum):
     linear = "linear"
     log = "log"
@@ -77,7 +61,7 @@ class LegendField:
 class SeriesItem:
     label: Optional[str] = None
     label_is_inferred: bool = False
-    sample_points: List[str] = field(default_factory=list)
+    sample_points: List[Any] = field(default_factory=list)
     style_hint: Optional[str] = None
     summary: Optional[str] = None
 
