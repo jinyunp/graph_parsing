@@ -1,11 +1,15 @@
 # 보안 파일
-data/images/*
-!data/images
-out/*
+data/images/**
+out/**
+
+# 폴더 유
+!data/images/.gitkeep
+!models/.gitkeep
 
 # 가상환경
 .venv
 
 # VLM
-!models
-models/*
+models/**
+
+__pycache__/
