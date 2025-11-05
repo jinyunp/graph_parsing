@@ -1,23 +1,50 @@
-import argparse
-from .core import convert_folder_to_pdf
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
 
-def main():
-    parser = argparse.ArgumentParser(description="DOC/DOCX → PDF 일괄 변환")
-    parser.add_argument("input_dir", help="워드 문서들이 있는 폴더")
-    parser.add_argument("output_dir", help="PDF를 저장할 별도 폴더")
-    parser.add_argument("--no-skip", action="store_true", help="기존 PDF가 있어도 덮어쓰기")
-    args = parser.parse_args()
+[project]
+name = "doc2pdf-batch"
+version = "0.1.0"
+description = "Batch convert .doc/.docx to PDF using docx2pdf or LibreOffice"
+readme = "README.md"
+requires-python = ">=3.8"
+authors = [{name="Your Name"}]
+keywords = ["docx2pdf", "LibreOffice", "batch", "convert", "pdf"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
 
-    total, success, skipped, failed = convert_folder_to_pdf(
-        input_dir=args.input_dir,
-        output_dir=args.output_dir,
-        skip_existing=not args.no_skip,
-    )
-    print("==== 결과 ====")
-    print(f"대상 파일: {total}")
-    print(f"성공: {success}")
-    print(f"건너뜀: {skipped}")
-    print(f"실패: {failed}")
+[project.optional-dependencies]
+docx2pdf = ["docx2pdf>=0.1.8"]
 
-if __name__ == "__main__":
-    main()
+[project.scripts]
+doc2pdf-batch = "doc2pdf_batch.__main__:main"
+
+[tool.setuptools]
+packages = ["doc2pdf_batch"]
+
+
+
+
+
+
+
+# doc2pdf-batch
+
+워드 문서(.doc / .docx)가 들어있는 **입력 폴더**를 통째로 훑어서, 동일한 하위 디렉터리 구조로 **출력 폴더**에 PDF를 생성합니다.
+
+## 주요 기능
+- `docx2pdf`(Word 기반, Windows/macOS 고품질) → 실패 시 **LibreOffice(soffice)** 자동 시도
+- 재귀 탐색, 상대 경로 구조 유지
+- 이미 존재하는 PDF는 기본적으로 **건너뜀** (옵션으로 덮어쓰기 가능)
+- **함수**와 **CLI** 모두 제공
+
+## 설치
+
+```bash
+pip install build
+python -m build
+pip install dist/doc2pdf_batch-0.1.0-py3-none-any.whl
+
