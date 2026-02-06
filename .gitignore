@@ -13,3 +13,5 @@ out/**
 models/**
 
 __pycache__
+replacements.txt
+/data/docs

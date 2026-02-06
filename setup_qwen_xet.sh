@@ -16,10 +16,14 @@ METHOD="${METHOD:-git}"                 # "git" (git-xet) or "snapshot"
 PYTHON_BIN="${PYTHON_BIN:-python3}"     # override if needed
 PIP_BIN="${PIP_BIN:-pip3}"
 EXTRA_PIP="${EXTRA_PIP:-}"
+VENV_NAME="${VENV_NAME:-doc_parsing}"
+VENV_DIR="${VENV_DIR:-.venv/${VENV_NAME}}"
 
 # New: requirements location hints (optional)
 REQUIREMENTS_PATH="${REQUIREMENTS_PATH:-}"   # accepts --requirements-path
 REQUIREMENTS_DIR="${REQUIREMENTS_DIR:-}"     # accepts --requirements-dir
+DEEPSEEK_REPO_URL="${DEEPSEEK_REPO_URL:-https://github.com/deepseek-ai/DeepSeek-OCR-2.git}"
+DEEPSEEK_DIR="${DEEPSEEK_DIR:-DeepSeek-OCR-2}"
 
 # -----------------------------
 # Args
@@ -36,10 +40,14 @@ Options:
   --extra-pip "<pkgs>"          Extra pip packages to install (quoted list). Optional.
   --requirements-path <file>    Path to requirements.txt (takes precedence if provided)
   --requirements-dir <dir>      Directory that contains requirements.txt (alternative to --requirements-path)
+  --venv-name <name>            Venv name (default: ${VENV_NAME})
+  --venv-dir <path>             Venv directory (default: ${VENV_DIR})
+  --deepseek-dir <path>         DeepSeek-OCR-2 clone dir (default: ${DEEPSEEK_DIR})
   -h, --help                    Show this help
 
 Environment overrides:
-  REPO_ID, TARGET_DIR, HF_TOKEN, METHOD, PYTHON_BIN, PIP_BIN, EXTRA_PIP, REQUIREMENTS_PATH, REQUIREMENTS_DIR
+  REPO_ID, TARGET_DIR, HF_TOKEN, METHOD, PYTHON_BIN, PIP_BIN, EXTRA_PIP, REQUIREMENTS_PATH, REQUIREMENTS_DIR,
+  VENV_NAME, VENV_DIR, DEEPSEEK_REPO_URL, DEEPSEEK_DIR
 
 Examples:
   HF_TOKEN=hf_xxx bash \$0
@@ -58,6 +66,9 @@ while [[ $# -gt 0 ]]; do
     --extra-pip) EXTRA_PIP="$2"; shift 2;;
     --requirements-path) REQUIREMENTS_PATH="$2"; shift 2;;
     --requirements-dir) REQUIREMENTS_DIR="$2"; shift 2;;
+    --venv-name) VENV_NAME="$2"; VENV_DIR=".venv/${VENV_NAME}"; shift 2;;
+    --venv-dir) VENV_DIR="$2"; shift 2;;
+    --deepseek-dir) DEEPSEEK_DIR="$2"; shift 2;;
     -h|--help) usage; exit 0;;
     *) echo "[WARN] Unknown arg: $1" >&2; shift;;
   esac
@@ -72,6 +83,9 @@ echo "PIP_BIN          : ${PIP_BIN}"
 echo "EXTRA_PIP        : ${EXTRA_PIP}"
 echo "REQ_PATH(opt)    : ${REQUIREMENTS_PATH:-<auto>}"
 echo "REQ_DIR (opt)    : ${REQUIREMENTS_DIR:-<auto>}"
+echo "VENV_NAME        : ${VENV_NAME}"
+echo "VENV_DIR         : ${VENV_DIR}"
+echo "DEEPSEEK_DIR     : ${DEEPSEEK_DIR}"
 echo "===================="
 
 # -----------------------------
@@ -112,6 +126,19 @@ ensure_python_pkgs() {
     # shellcheck disable=SC2086
     ${PIP_BIN} install -U ${EXTRA_PIP}
   fi
+}
+
+ensure_venv() {
+  echo "[*] Ensuring venv: ${VENV_DIR}"
+  if [[ ! -d "${VENV_DIR}" ]]; then
+    mkdir -p "$(dirname "${VENV_DIR}")"
+    ${PYTHON_BIN} -m venv "${VENV_DIR}"
+  fi
+  # shellcheck disable=SC1090
+  source "${VENV_DIR}/bin/activate"
+  PYTHON_BIN="${VENV_DIR}/bin/python"
+  PIP_BIN="${VENV_DIR}/bin/pip"
+  echo "[*] Using venv python: ${PYTHON_BIN}"
 }
 
 hf_login_if_token() {
@@ -248,11 +275,47 @@ install_requirements_smart() {
   return 0
 }
 
+clone_deepseek_if_needed() {
+  if [[ -d "${DEEPSEEK_DIR}/.git" ]]; then
+    echo "[*] DeepSeek repo already exists: ${DEEPSEEK_DIR}"
+    return 0
+  fi
+  echo "[*] Cloning DeepSeek-OCR-2: ${DEEPSEEK_REPO_URL} -> ${DEEPSEEK_DIR}"
+  git clone "${DEEPSEEK_REPO_URL}" "${DEEPSEEK_DIR}"
+}
+
+install_deepseek_deps() {
+  echo "[*] Installing DeepSeek-OCR-2 dependencies..."
+  ${PIP_BIN} install torch==2.6.0 torchvision==0.21.0 torchaudio==2.6.0 --index-url https://download.pytorch.org/whl/cu118
+  ${PIP_BIN} install vllm-0.8.5+cu118-cp38-abi3-manylinux1_x86_64.whl
+
+  local merged_req
+  merged_req="$(mktemp)"
+  echo "[*] Merging requirements into: ${merged_req}"
+  if [[ -f "${PWD}/requirements.txt" ]]; then
+    cat "${PWD}/requirements.txt" >> "${merged_req}"
+  fi
+  if [[ -f "${DEEPSEEK_DIR}/requirements.txt" ]]; then
+    cat "${DEEPSEEK_DIR}/requirements.txt" >> "${merged_req}"
+  fi
+  if [[ -s "${merged_req}" ]]; then
+    sort -u "${merged_req}" > "${merged_req}.uniq"
+    mv "${merged_req}.uniq" "${merged_req}"
+    ${PIP_BIN} install -r "${merged_req}"
+  else
+    echo "[WARN] No requirements.txt found to merge/install."
+  fi
+  rm -f "${merged_req}" || true
+
+  ${PIP_BIN} install flash-attn==2.7.3 --no-build-isolation
+}
+
 # -----------------------------
 # Main
 # -----------------------------
 install_base_tools
 ensure_git_xet_if_needed
+ensure_venv
 ensure_python_pkgs
 hf_login_if_token
 
@@ -266,6 +329,8 @@ else
 fi
 
 install_requirements_smart
+clone_deepseek_if_needed
+install_deepseek_deps
 
 echo
 echo "✅ All done."
