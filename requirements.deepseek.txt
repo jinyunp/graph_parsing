@@ -8,4 +8,5 @@ easydict
 addict
 pillow
 numpy
+accelerate>=0.26.0
 psutil

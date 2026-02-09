@@ -13,15 +13,20 @@ from config import DEEPSEEK_MODEL_ID
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 model_name = DEEPSEEK_MODEL_ID
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+dtype = torch.bfloat16 if device.type == "cuda" else torch.float32
 
 tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
 model = AutoModel.from_pretrained(
     model_name,
-    _attn_implementation="flash_attention_2",
     trust_remote_code=True,
+    torch_dtype=dtype,
+    attn_implementation="flash_attention_2",
+    device_map="cuda" if device.type == "cuda" else None,
     use_safetensors=True,
 )
-model = model.eval().cuda().to(torch.bfloat16)
+model = model.to(device).eval()
+
 
 prompt = "<image>\n<|grounding|>Convert the document to markdown. The layout of the document shows both sides in one image. \
     Please separate the content of the left and right sides into two sections in the markdown output.\n<|end|>\n"
@@ -34,7 +39,7 @@ pdf_path = Path("/root/graph_parsing/data/docs/Iron Making Text Book 2008.pdf")
 
 # 👉 페이지 범위 설정 (1-index 기준)
 START_PAGE = 9     # None이면 처음부터
-END_PAGE = 12     # None이면 끝까지
+END_PAGE = 10     # None이면 끝까지
 
 # 파일명만 추출 (확장자 제거)
 pdf_stem = pdf_path.stem  # ex) contract_2024
