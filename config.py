@@ -47,3 +47,7 @@ SUMMARY_MAX_SENT = int(os.environ.get("SUMMARY_MAX_SENT", "6"))
 # Debug
 DEBUG = os.environ.get("DEBUG", "true").lower() == "true"
 DEBUG_TRACE = os.environ.get("DEBUG_TRACE", "true").lower() == "true"
+
+
+# Deepseek-OCR-2
+DEEPSEEK_MODEL_ID = os.environ.get("DEEPSEEK_MODEL_ID", "/workspace/models/DeepSeek-OCR-2")

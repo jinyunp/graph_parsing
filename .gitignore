@@ -1,10 +1,13 @@
 # 보안 파일
 data/images/**
+data/docs/**
 out/**
+data/output/**
 
 # 폴더 유지
 !data/images/.gitkeep
 !models/.gitkeep
+!data/docs/.gitkeep
 
 # 가상환경
 .venv
@@ -14,4 +17,3 @@ models/**
 
 __pycache__
 replacements.txt
-/data/docs
