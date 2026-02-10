@@ -28,106 +28,90 @@ model = AutoModel.from_pretrained(
 model = model.to(device).eval()
 
 
-prompt = "<image>\n<|grounding|>Convert the document to markdown. The layout of the document shows both sides in one image. \
-    Please separate the content of the left and right sides into two sections in the markdown output.\n<|end|>\n"
+prompt = "<image>\n<|grounding|>Convert the document to markdown. The layout of the document may show both sides in one image or just one page in a image. \
+    If the image shows two sides, please separate the content of the left and right sides into two sections in the markdown output.\n<|end|>\n"
 
 
 # -----------------------------------
 # 🔹 PDF 입력
 # -----------------------------------
-pdf_path = Path("/root/graph_parsing/data/docs/Iron Making Text Book 2008.pdf")
+# pdf_path = Path("/root/graph_parsing/data/docs/Iron Making Text Book 2008.pdf")
+docs_dir = Path("/root/graph_parsing/data/docs")
+pdf_paths = sorted(docs_dir.glob("*.pdf"))
+if not pdf_paths:
+    raise FileNotFoundError(f"No PDF files found in: {docs_dir}")
+
 
 # 👉 페이지 범위 설정 (1-index 기준)
-START_PAGE = 9     # None이면 처음부터
-END_PAGE = 10     # None이면 끝까지
+START_PAGE = None     # None이면 처음부터
+END_PAGE = None     # None이면 끝까지
 
-# 파일명만 추출 (확장자 제거)
-pdf_stem = pdf_path.stem  # ex) contract_2024
+DPI = 200 
+ZOOM = DPI / 72.0
 
-# 출력 루트
 base_output_dir = Path("data/output")
+base_output_dir.mkdir(parents=True, exist_ok=True)
 
-# 👉 data/output/{파일명}/ 자동 생성
-output_root = base_output_dir / pdf_stem
-output_root.mkdir(parents=True, exist_ok=True)
+for pdf_path in tqdm(pdf_paths, desc="Processing PDFs"):
+    pdf_stem = pdf_path.stem
+    output_root = base_output_dir / pdf_stem
+    output_root.mkdir(parents=True, exist_ok=True)
 
-print(f"📂 Output directory: {output_root.resolve()}")
+    print(f"\n📄 PDF: {pdf_path}")
+    print(f"📂 Output directory: {output_root.resolve()}")
 
-# -----------------------------------
-# PDF 렌더링
-# -----------------------------------
-DPI = 200
-ZOOM = DPI / 72.0
+    doc = fitz.open(pdf_path)
+    total_pages = len(doc)
 
-doc = fitz.open(pdf_path)
-total_pages = len(doc)
-all_markdown = []
+    # 페이지 범위 보정 (문서별로 total_pages 반영)
+    start_page = 1 if START_PAGE is None else START_PAGE
+    end_page = total_pages if END_PAGE is None else END_PAGE
 
-# 페이지 범위 보정
-if START_PAGE is None:
-    START_PAGE = 1
-if END_PAGE is None:
-    END_PAGE = total_pages
+    if start_page < 1 or end_page > total_pages or start_page > end_page:
+        raise ValueError(
+            f"Invalid page range for {pdf_path.name}: {start_page}~{end_page} (Total pages: {total_pages})"
+        )
 
-# 유효성 체크
-if START_PAGE < 1 or END_PAGE > total_pages or START_PAGE > END_PAGE:
-    raise ValueError(
-        f"Invalid page range: {START_PAGE}~{END_PAGE} (Total pages: {total_pages})"
-    )
+    print(f"📄 Processing pages {start_page} ~ {end_page} / {total_pages}")
 
-print(f"📄 Processing pages {START_PAGE} ~ {END_PAGE} / {total_pages}")
+    start_idx = start_page - 1
+    end_idx = end_page  # range 끝 미포함
 
-# 0-index 변환
-start_idx = START_PAGE - 1
-end_idx = END_PAGE  # python range에서 끝은 미포함이라 그대로 사용
+    all_markdown = []
 
-DPI = 200
-ZOOM = DPI / 72.0
+    for page_idx in tqdm(range(start_idx, end_idx), desc=f"Pages ({pdf_path.name})", leave=False):
+        page = doc.load_page(page_idx)
 
-all_markdown = []
+        mat = fitz.Matrix(ZOOM, ZOOM)
+        pix = page.get_pixmap(matrix=mat, alpha=False)
 
-for page_idx in tqdm(range(start_idx, end_idx), desc="Processing pages"):
-    page = doc.load_page(page_idx)
+        page_number = page_idx + 1
+        page_img_path = output_root / f"page_{page_number:04d}.png"
+        pix.save(str(page_img_path))
 
-    mat = fitz.Matrix(ZOOM, ZOOM)
-    pix = page.get_pixmap(matrix=mat, alpha=False)
+        page_out_dir = output_root / f"page_{page_number:04d}"
+        page_out_dir.mkdir(parents=True, exist_ok=True)
 
-    page_number = page_idx + 1
-    page_img_path = output_root / f"page_{page_number:04d}.png"
-    pix.save(str(page_img_path))
+        with open(os.devnull, "w") as fnull:
+            with redirect_stdout(fnull):
+                res = model.infer(
+                    tokenizer,
+                    prompt=prompt,
+                    image_file=str(page_img_path),
+                    output_path=str(page_out_dir),
+                    base_size=1024,
+                    image_size=768,
+                    crop_mode=True,
+                    save_results=True,
+                )
 
-    page_out_dir = output_root / f"page_{page_number:04d}"
-    page_out_dir.mkdir(parents=True, exist_ok=True)
+        if isinstance(res, str):
+            page_md = res
+        else:
+            page_md = getattr(res, "text", None) or repr(res)
 
-    print(f"📄 Processing page {page_number} ...")
+        all_markdown.append(f"\n\n<!-- Page {page_number} -->\n\n{page_md}")
 
-    with open(os.devnull, "w") as fnull:
-        with redirect_stdout(fnull):
-            res = model.infer(
-                tokenizer,
-                prompt=prompt,
-                image_file=str(page_img_path),
-                output_path=str(page_out_dir),
-                base_size=1024,
-                image_size=768,
-                crop_mode=True,
-                save_results=True,
-            )
-
-    print(f"✅ Page {page_number} done.")
-
-
-    if isinstance(res, str):
-        page_md = res
-    else:
-        page_md = getattr(res, "text", None) or repr(res)
-
-    all_markdown.append(f"\n\n<!-- Page {page_number} -->\n\n{page_md}")
-
-# -----------------------------------
-# 최종 저장
-# -----------------------------------
-final_md_path = output_root / f"{pdf_stem}_{START_PAGE}-{END_PAGE}.md"
-final_md_path.write_text("".join(all_markdown), encoding="utf-8")
-
-print(f"✅ Done. Saved to: {final_md_path.resolve()}")
+    final_md_path = output_root / f"{pdf_stem}_{start_page}-{end_page}.md"
+    final_md_path.write_text("".join(all_markdown), encoding="utf-8")
+    print(f"✅ Done. Saved to: {final_md_path.resolve()}")
